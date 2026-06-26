@@ -495,10 +495,15 @@ static void print_help(void)
 	printk("reboot                       Soft reset the device\n");
 	printk("battery                      Get battery information\n");
 	printk("\nscan                         Restart sensor scan\n");
-	printk("calibrate                    Calibrate sensor ZRO\n");
+	printk("calibrate                    Calibrate sensor ZRO (gyro/accel bias)\n");
 	printk("6-side                       Calibrate 6-side accelerometer\n");
 #if SENSOR_MAG_EXISTS
-	printk("mag                          Clear magnetometer calibration\n");
+	printk("mag                          Clear magnetometer calibration data\n");
+	printk("calibrate_mag                Start magnetometer calibration (clears existing data first)\n");
+#endif
+	printk("\ndebug_imu                    Print real-time IMU data (accel in g, gyro in deg/s)\n");
+#if SENSOR_MAG_EXISTS
+	printk("debug_mag                    Print real-time magnetometer data\n");
 #endif
 	printk("\nset <address>                Manually set receiver\n");
 	printk("pair                         Enter pairing mode\n");
@@ -507,11 +512,6 @@ static void print_help(void)
 	printk("\ndfu                          Enter DFU bootloader\n");
 #endif
 	printk("\nmeow                         Meow!\n");
-
-	printk("\ndebug_imu                    Print real-time IMU data (accel/gyro)\n");
-#if SENSOR_MAG_EXISTS
-	printk("debug_mag                    Print real-time magnetometer data\n");
-#endif
 
 #if SENSOR_MAG_EXISTS
 	printk("\nreset_data (zro|acc|mag|bat|all)\n");
@@ -523,6 +523,8 @@ static void print_help(void)
 	printk("write_config (base64|<config name>|<config id>) <value>\n");
 	printk("read_config (all|base64|<config name>|<config id>)\n");
 	printk("reset_config (all|<config name>|<config id>)\n");
+
+	printk("\nnvs                          Display NVS storage statistics\n");
 }
 
 static void console_thread(void)
@@ -561,6 +563,7 @@ static void console_thread(void)
 	const char command_6_side[] = "6-side";
 #if SENSOR_MAG_EXISTS
 	const char command_mag[] = "mag";
+	const char command_calibrate_mag[] = "calibrate_mag";
 #endif
 	const char command_set[] = "set";
 	const char command_pair[] = "pair";
@@ -649,6 +652,13 @@ static void console_thread(void)
 		else if (strcmp(argv[0], command_mag) == 0)
 		{
 			sensor_calibration_clear_mag(NULL, true);
+		}
+		else if (strcmp(argv[0], command_calibrate_mag) == 0)
+		{
+			printk("Starting magnetometer calibration...\n");
+			printk("Please rotate the device to cover all 6 sides (-X +X -Y +Y -Z +Z).\n");
+			sensor_calibration_clear_mag(NULL, true);
+			sensor_request_calibration_mag();
 		}
 #endif
 		else if (strcmp(argv[0], command_set) == 0)
