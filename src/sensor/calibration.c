@@ -29,7 +29,7 @@
 #include "sensors_enum.h"
 #include "magneto/magneto1_4.h"
 #include "imu/BMI270.h"
-
+#include "sensor.h"
 #include "calibration.h"
 
 static uint8_t imu_id;
@@ -247,9 +247,9 @@ void sensor_request_calibration_6_side(void)
 
 void sensor_request_calibration_mag(void)
 {
+	if (!(magneto_progress & 0b10000000) && !sensor_calibration_request(0)) // no mag cal or other cal running, safe to reset
+		magneto_reset(); // clear any leftover progress from previous calibration
 	magneto_progress |= 1 << 7;
-	if (magneto_progress == 0b10111111)
-		magneto_progress |= 1 << 6;
 	k_thread_resume(calibration_thread_id);
 }
 
@@ -459,17 +459,28 @@ static int sensor_calibrate_mag(void)
 {
 	float zero[3] = {0};
 	if (v_diff_mag(magBAinv[0], zero) != 0)
+	{
+		LOG_WRN("Magnetometer calibration already exists, aborting");
 		return -1; // magnetometer calibration already exists
+	}
 
 	float m[3];
 	if (sensor_wait_mag(m, K_MSEC(1000)))
+	{
+		LOG_ERR("Magnetometer calibration failed: no data received within 1s (sensor not responding?)");
+		printk("Magnetometer calibration failed: no data received within 1s.\n");
+		printk("Please check that the magnetometer is properly connected and detected.\n");
 		return -1; // Timeout
+	}
 	sensor_sample_mag_magneto_sample(aBuf, m); // 400us
 	if (magneto_progress != 0b11111111)
 		return 3; // signal to wait 100ms
 
 	float m_inv[4][3];
 	LOG_INF("Calibrating magnetometer hard/soft iron offset");
+#if CONFIG_MAG_AUTO_CALIBRATION
+	printk("Magnetometer calibration: computing calibration matrix...\n");
+#endif
 
 	// max allocated 1072 bytes
 #if DEBUG
@@ -493,6 +504,11 @@ static int sensor_calibrate_mag(void)
 	if (sensor_calibration_validate_mag(m_inv, false))
 	{
 		set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_SENSOR);
+		LOG_ERR("Magnetometer calibration validation failed");
+		printk("Magnetometer calibration failed: validation error.\n");
+		printk("The computed calibration matrix is invalid (offset or scale out of range).\n");
+		printk("This may indicate insufficient or poor quality data collection.\n");
+		printk("Please try again, ensuring the device is rotated through all 6 sides.\n");
 		LOG_INF("Restoring previous calibration");
 		LOG_INF("Magnetometer matrix:");
 		for (int i = 0; i < 3; i++)
@@ -510,6 +526,7 @@ static int sensor_calibrate_mag(void)
 
 	LOG_INF("Finished calibration");
 	set_led(SYS_LED_PATTERN_ONESHOT_COMPLETE, SYS_LED_PRIORITY_SENSOR);
+	printk("Magnetometer calibration complete.\n");
 	return 0;
 }
 
@@ -756,6 +773,9 @@ static void sensor_sample_mag_magneto_sample(const float a[3], const float m[3])
 		{
 			magneto_progress = new_magneto_progress;
 			LOG_INF("Magnetometer calibration progress: %s %s %s %s %s %s" , (new_magneto_progress & 0x01) ? "-X" : "--", (new_magneto_progress & 0x02) ? "+X" : "--", (new_magneto_progress & 0x04) ? "-Y" : "--", (new_magneto_progress & 0x08) ? "+Y" : "--", (new_magneto_progress & 0x10) ? "-Z" : "--", (new_magneto_progress & 0x20) ? "+Z" : "--");
+#if CONFIG_MAG_AUTO_CALIBRATION
+			printk("Magnetometer calibration progress: %s %s %s %s %s %s\n", (new_magneto_progress & 0x01) ? "-X" : "--", (new_magneto_progress & 0x02) ? "+X" : "--", (new_magneto_progress & 0x04) ? "-Y" : "--", (new_magneto_progress & 0x08) ? "+Y" : "--", (new_magneto_progress & 0x10) ? "-Z" : "--", (new_magneto_progress & 0x20) ? "+Z" : "--");
+#endif
 			set_led(SYS_LED_PATTERN_ONESHOT_PROGRESS, SYS_LED_PRIORITY_SENSOR);
 		}
 	}
@@ -765,7 +785,13 @@ static void sensor_sample_mag_magneto_sample(const float a[3], const float m[3])
 		last_magneto_progress = new_magneto_progress;
 	}
 	if (magneto_progress == 0b10111111)
+	{
+		magneto_progress |= 1 << 6; // all sides collected, signal ready to compute
 		set_led(SYS_LED_PATTERN_FLASH, SYS_LED_PRIORITY_SENSOR); // Magnetometer calibration is ready to apply
+#if CONFIG_MAG_AUTO_CALIBRATION
+		printk("Magnetometer calibration: all sides collected, computing calibration...\n");
+#endif
+	}
 }
 
 static int sensor_calibration_request(int id)
@@ -802,7 +828,36 @@ static void calibration_thread(void)
 	sensor_calibration_validate_6_side(NULL, true);
 	sensor_calibration_validate_mag(NULL, true);
 
+#if CONFIG_MAG_AUTO_CALIBRATION
+	// Auto-start magnetometer calibration if data is empty or invalid
+	{
+		float zero[3] = {0};
+		if (v_diff_mag(magBAinv[0], zero) == 0) // mag cal is empty (offset is zero)
+		{
+			printk("Magnetometer calibration data is empty or invalid.\n");
+			printk("Waiting for sensor to initialize...\n");
+			// Wait for sensor to be ready (timeout 30s)
+			int64_t wait_start = k_uptime_get();
+			while (get_status(SYS_STATUS_SENSOR_ERROR) && k_uptime_get() - wait_start < 30000)
+				k_msleep(100);
+			// Check if mag is available
+			if (sensor_mag_available())
+			{
+				k_msleep(1000); // Wait for mag to initialize
+				printk("Starting automatic magnetometer calibration...\n");
+				printk("Please rotate the device to cover all 6 sides (-X +X -Y +Y -Z +Z).\n");
+				sensor_request_calibration_mag();
+			}
+			else
+			{
+				printk("No magnetometer detected, skipping auto-calibration.\n");
+			}
+		}
+	}
+#endif
+
 	// requested calibrations run here
+	static int64_t mag_cal_start_time = 0; // track mag calibration duration for timeout
 	while (1)
 	{
 		// update calibration config
@@ -828,7 +883,42 @@ static void calibration_thread(void)
 			break;
 		default:
 			if (magneto_progress & 0b10000000)
+			{
+				if (!mag_cal_start_time)
+					mag_cal_start_time = k_uptime_get();
+				// 60s timeout: exit if no mag calibration data collected in time
+				if (k_uptime_get() - mag_cal_start_time > 60000)
+				{
+					uint8_t collected_sides = magneto_progress;
+					set_status(SYS_STATUS_CALIBRATION_RUNNING, false);
+					magneto_progress = 0; // clear request on timeout
+					magneto_reset();
+					mag_cal_start_time = 0;
+					LOG_ERR("Magnetometer calibration timed out (60s without completion)");
+					printk("Magnetometer calibration timed out: 60 seconds elapsed without completing all 6 sides.\n");
+					printk("Collected sides: %s %s %s %s %s %s\n",
+						(collected_sides & 0x01) ? "-X" : "--",
+						(collected_sides & 0x02) ? "+X" : "--",
+						(collected_sides & 0x04) ? "-Y" : "--",
+						(collected_sides & 0x08) ? "+Y" : "--",
+						(collected_sides & 0x10) ? "-Z" : "--",
+						(collected_sides & 0x20) ? "+Z" : "--");
+					printk("Please rotate the device through all 6 orientations (-X +X -Y +Y -Z +Z) and try again.\n");
+					requested = 0;
+					break;
+				}
+				set_status(SYS_STATUS_CALIBRATION_RUNNING, true);
 				requested = sensor_calibrate_mag();
+				if (requested == 0 || requested == -1) // cal done or failed
+				{
+					set_status(SYS_STATUS_CALIBRATION_RUNNING, false);
+					mag_cal_start_time = 0; // reset timeout tracker
+					if (requested == -1)
+					{
+						magneto_progress = 0; // clear request on failure to prevent busy-loop
+					}
+				}
+			}
 			break;
 		}
 		if (requested == 0) // no calibration request

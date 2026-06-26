@@ -101,6 +101,21 @@ config USER_EXTRA_ACTIONS
         By default, pairing is available when holding down sw0 for 5 seconds.
         By default, DFU is available when holding down sw0 and plugging in a USB cable.
 
+config BUTTON_ZANNENSMOL_LAYOUT
+    bool "ZannenSmol button layout"
+    help
+        Use ZannenSmol-specific SW0 button layout:
+        1 press = Reset, 2 presses = Calibration,
+        3 presses = Magnetometer Calibration,
+        Press and hold for 2s = Deep Sleep.
+
+config MAG_AUTO_CALIBRATION
+    bool "Magnetometer auto-calibration"
+    help
+        Automatically start magnetometer calibration when calibration data
+        is empty or invalid at boot. Also prints progress logs to the console
+        during magnetometer calibration.
+
 config IGNORE_RESET
     bool "Ignore reset"
     default y

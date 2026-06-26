@@ -508,6 +508,11 @@ static void print_help(void)
 #endif
 	printk("\nmeow                         Meow!\n");
 
+	printk("\ndebug_imu                    Print real-time IMU data (accel/gyro)\n");
+#if SENSOR_MAG_EXISTS
+	printk("debug_mag                    Print real-time magnetometer data\n");
+#endif
+
 #if SENSOR_MAG_EXISTS
 	printk("\nreset_data (zro|acc|mag|bat|all)\n");
 #else
@@ -564,6 +569,10 @@ static void console_thread(void)
 	const char command_dfu[] = "dfu";
 #endif
 	const char command_meow[] = "meow";
+	const char command_debug_imu[] = "debug_imu";
+#if SENSOR_MAG_EXISTS
+	const char command_debug_mag[] = "debug_mag";
+#endif
 
 	// data
 	const char command_reset_data[] = "reset_data";
@@ -681,6 +690,33 @@ static void console_thread(void)
 		{
 			print_meow();
 		}
+		else if (strcmp(argv[0], command_debug_imu) == 0)
+		{
+			float a[3], g[3];
+			if (sensor_debug_read_imu(a, g))
+			{
+				printk("IMU not available\n");
+			}
+			else
+			{
+				printk("Accel: %.5f %.5f %.5f (g)\n", (double)a[0], (double)a[1], (double)a[2]);
+				printk("Gyro:  %.5f %.5f %.5f (deg/s)\n", (double)g[0], (double)g[1], (double)g[2]);
+			}
+		}
+#if SENSOR_MAG_EXISTS
+		else if (strcmp(argv[0], command_debug_mag) == 0)
+		{
+			float m[3];
+			if (sensor_debug_read_mag(m))
+			{
+				printk("Magnetometer not available\n");
+			}
+			else
+			{
+				printk("Mag: %.5f %.5f %.5f\n", (double)m[0], (double)m[1], (double)m[2]);
+			}
+		}
+#endif
 		else if (strcmp(argv[0], command_reset_data) == 0)
 		{
 			if (argc != 2)
