@@ -167,6 +167,11 @@ const char *sensor_get_sensor_fusion_name(void)
 	return fusion_names[fusion_id];
 }
 
+bool sensor_mag_available(void)
+{
+	return mag_available;
+}
+
 int sensor_get_sensor_temperature(float *ptr)
 {
 	if (sensor_imu == &sensor_imu_none || (k_uptime_get() - last_temp_time > 1000))
@@ -1190,4 +1195,23 @@ void main_imu_restart(void)
 {
 	if (main_ok) // only restart fusion if initialized
 		sensor_fusion->init(gyro_actual_time, accel_actual_time, mag_actual_time);
+}
+
+int sensor_debug_read_imu(float a[3], float g[3])
+{
+	if (!main_ok || sensor_imu == &sensor_imu_none)
+		return -1;
+	sys_interface_resume();
+	sensor_imu->accel_read(a);
+	sensor_imu->gyro_read(g);
+	return 0;
+}
+
+int sensor_debug_read_mag(float m[3])
+{
+	if (!mag_available || !mag_enabled || sensor_mag == &sensor_mag_none)
+		return -1;
+	sys_interface_resume();
+	sensor_mag->mag_read(m);
+	return 0;
 }
