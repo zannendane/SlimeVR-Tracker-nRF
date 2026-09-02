@@ -33,6 +33,7 @@
 #include "sensors.h"
 
 #include "sensor.h"
+#include "tap_detect.h"
 
 #define SPI_OP SPI_MODE_CPOL | SPI_MODE_CPHA | SPI_WORD_SET(8)
 
@@ -764,6 +765,7 @@ int sensor_init(void)
 	LOG_INF("Using %s", fusion_names[fusion_id]);
 	LOG_INF("Initialized fusion");
 	sensor_fusion_init = true;
+	tap_detect_reset();
 	return 0;
 }
 
@@ -861,7 +863,7 @@ void sensor_loop(void)
 			// Read magnetometer
 			float raw_m[3];
 			bool mag_read = false;
-			if (mag_available && mag_enabled && (k_uptime_get() - last_mag_time > mag_interval)) // some magnetometer do not have int pin // TODO: implement for magnetometer that does, or read status byte
+			if (mag_available && mag_enabled && !(CONFIG_MAG_IGNORE_WHILE_CHARGING && chg_read()) && (k_uptime_get() - last_mag_time > mag_interval)) // some magnetometer do not have int pin // TODO: implement for magnetometer that does, or read status byte
 			{
 				mag_read = true;
 				sensor_mag->mag_read(raw_m); // reading mag last, and it will be processed last
@@ -926,6 +928,7 @@ void sensor_loop(void)
 					int64_t fuse_time = k_uptime_ticks();
 #endif
 					sensor_fusion->update_gyro(g, gyro_actual_time);
+					tap_detect_gyro(g);
 #if DEBUG
 					if (valid_acquisition)
 						total_gyro_fuse_time += k_uptime_ticks() - fuse_time;
@@ -960,6 +963,7 @@ void sensor_loop(void)
 					int64_t fuse_time = k_uptime_ticks();
 #endif
 					sensor_fusion->update_accel(a, accel_actual_time);
+					tap_detect_process(a, accel_actual_time);
 #if DEBUG
 					if (valid_acquisition)
 						total_accel_fuse_time += k_uptime_ticks() - fuse_time;

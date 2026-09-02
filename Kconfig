@@ -46,6 +46,49 @@ config BATTERY_LOW_RUNTIME_THRESHOLD
       Trigger low battery when estimated runtime falls below threshold.
       If estimated runtime is not available, low battery will trigger under 10% estimated state of charge.
 
+config BATTERY_ADC_GAIN_DIVISOR
+    int "Battery ADC gain divisor override"
+    default 0
+    range 0 6
+    help
+      Force the SAADC gain used for battery measurement, given as the
+      divisor of the gain (e.g. 5 selects 1/5 gain, 3.0V full scale).
+      0 selects the gain automatically from the divider ratio.
+
+config BATTERY_ADC_RESOLUTION
+    int "Battery ADC resolution (bits)"
+    default 14
+    range 8 14
+
+config BATTERY_ADC_OVERSAMPLING
+    int "Battery ADC oversampling exponent (samples averaged = 2^n)"
+    default 7
+    range 0 8
+
+config BATTERY_ADC_ACQUISITION_US
+    int "Battery ADC acquisition time (us)"
+    default 3
+    help
+      SAADC acquisition (TACQ) time in microseconds.
+      Valid values for nRF52 SAADC: 3, 5, 10, 15, 20, 40.
+
+config BATTERY_MEASURE_SETTLE_MS
+    int "Battery divider settling time before sampling (ms)"
+    default 0
+    help
+      Delay between enabling the battery divider power switch and
+      sampling the ADC, allowing the divider output buffer to settle.
+
+config BATTERY_SAMPLE_INTERVAL_MS
+    int "Battery voltage sampling interval (ms)"
+    default 100
+    range 100 3600000
+    help
+      Interval between battery voltage measurements. The power thread
+      cycles every 100 ms, so 100 means every cycle (original behavior).
+      Battery voltage changes slowly, a longer interval saves the power
+      drawn by the divider and the ADC with no practical downside.
+
 choice
     prompt "Status LED color mapping"
     default LED_TRI_COLOR
@@ -109,12 +152,49 @@ config BUTTON_ZANNENSMOL_LAYOUT
         3 presses = Magnetometer Calibration,
         Press and hold for 2s = Deep Sleep.
 
+config USE_IMU_TAP
+    bool "Use IMU tap detection as user input"
+    help
+        Detect taps on the tracker from the accelerometer stream and treat
+        them like button presses: 2 taps = calibration, 3 taps = pairing
+        reset, 4 or more taps = DFU (same mapping as reset counting).
+        Taps are detected in software while the system is active, so this
+        works at any ODR and in every sensor power mode. In IMU wake up
+        (WOM) state any tap is motion and already wakes the system, no
+        additional configuration is needed there.
+
+config IMU_TAP_THRESHOLD
+    int "Tap detection threshold (mg)"
+    default 600
+    depends on USE_IMU_TAP
+    help
+        Dynamic acceleration above the gravity baseline required to start
+        registering a tap. Raise if handling the tracker triggers taps.
+
+config IMU_TAP_GYRO_GATE
+    int "Tap detection gyroscope gate (dps)"
+    default 60
+    depends on USE_IMU_TAP
+    help
+        Ignore taps while the tracker is rotating faster than this,
+        rejects most false detections during use.
+
 config MAG_AUTO_CALIBRATION
     bool "Magnetometer auto-calibration"
     help
         Automatically start magnetometer calibration when calibration data
         is empty or invalid at boot. Also prints progress logs to the console
         during magnetometer calibration.
+
+config MAG_IGNORE_WHILE_CHARGING
+    bool "Ignore magnetometer while charging"
+    depends on SENSOR_USE_MAG
+    help
+        Suspend magnetometer reads and fusion updates while the battery is
+        charging. Charge current flowing near the magnetometer disturbs the
+        magnetic field, ignoring it avoids polluting the fusion's local
+        field reference. Heading is tracked by the gyroscope alone while
+        charging and resumes seamlessly afterwards.
 
 config IGNORE_RESET
     bool "Ignore reset"
@@ -147,12 +227,26 @@ config WOM_USE_DCDC
     help
         Use DCDC instead of LDO in IMU wake up state if it is more efficient.
 
+config WOM_ACCEL_ODR
+    int "WOM accelerometer output data rate (Hz)"
+    default 240
+    range 15 480
+    depends on USE_IMU_WAKE_UP
+    help
+        Accelerometer ODR used in IMU wake up (WOM) state, rounded down
+        to the nearest supported rate. A lower rate reduces WOM current
+        consumption at the cost of slower motion detection latency.
+        Currently applied to LSM6DSV(16X) only.
+
 config CONNECTION_TIMEOUT_DELAY
     int "Connection timeout delay (ms)"
     default 300000
     depends on USER_SHUTDOWN
     help
-        Connection timeout duration when receiver is not detected.
+        Cumulative awake time without a receiver connection before
+        shutting down. The accumulated time is kept in retained memory
+        and survives IMU wake up (WOM) cycles, so it measures total
+        disconnected time rather than one continuous stretch.
 
 choice
     prompt "Sensor rotation"

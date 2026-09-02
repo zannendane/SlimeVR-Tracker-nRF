@@ -101,8 +101,8 @@ static int divider_setup(void)
 		.channels = BIT(0),
 		.buffer = &ddp->raw,
 		.buffer_size = sizeof(ddp->raw),
-		.oversampling = 7, // TODO: using R3 board, ADC is very noisy, are other boards okay?
-		.resolution = 14,
+		.oversampling = CONFIG_BATTERY_ADC_OVERSAMPLING, // TODO: using R3 board, ADC is very noisy, are other boards okay?
+		.resolution = CONFIG_BATTERY_ADC_RESOLUTION,
 		.calibrate = true,
 	};
 
@@ -122,13 +122,28 @@ static int divider_setup(void)
 	else if (max_adc_voltage < 3.0f)
 		battery_adc_gain = ADC_GAIN_1_5;
 
+	// Forced gain from Kconfig overrides the auto-selected one
+#if CONFIG_BATTERY_ADC_GAIN_DIVISOR == 1
+	battery_adc_gain = ADC_GAIN_1;
+#elif CONFIG_BATTERY_ADC_GAIN_DIVISOR == 2
+	battery_adc_gain = ADC_GAIN_1_2;
+#elif CONFIG_BATTERY_ADC_GAIN_DIVISOR == 3
+	battery_adc_gain = ADC_GAIN_1_3;
+#elif CONFIG_BATTERY_ADC_GAIN_DIVISOR == 4
+	battery_adc_gain = ADC_GAIN_1_4;
+#elif CONFIG_BATTERY_ADC_GAIN_DIVISOR == 5
+	battery_adc_gain = ADC_GAIN_1_5;
+#elif CONFIG_BATTERY_ADC_GAIN_DIVISOR == 6
+	battery_adc_gain = ADC_GAIN_1_6;
+#endif
+
 	LOG_INF("ADC gain enum: %d, max voltage: %.2f mV",
 		battery_adc_gain, (double)(max_adc_voltage * 1000.0f));
 
 	*accp = (struct adc_channel_cfg){
 		.gain = battery_adc_gain,
 		.reference = ADC_REF_INTERNAL,
-		.acquisition_time = ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 3),
+		.acquisition_time = ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, CONFIG_BATTERY_ADC_ACQUISITION_US),
 	};
 
 	if (cfg->output_ohm != 0) {
@@ -178,6 +193,8 @@ int battery_measure_enable(bool enable)
 		rc = 0;
 		if (gcp->port) {
 			rc = gpio_pin_set_dt(gcp, enable);
+			if (enable && rc == 0 && CONFIG_BATTERY_MEASURE_SETTLE_MS > 0)
+				k_msleep(CONFIG_BATTERY_MEASURE_SETTLE_MS); // wait for the divider output to settle
 		}
 	}
 	return rc;

@@ -211,6 +211,8 @@ jobs:
                   {boardname: "zannensmol_uf2/nrf52840/spi", fileformat: "uf2", filename: "SlimeNRF_ZannenSmol_SPI_Tracker"},
                   {boardname: "zannensmol_uf2/nrf52840/i2c_clk", fileformat: "uf2", filename: "SlimeNRF_ZannenSmol_I2C_CLK_Tracker"},
                   {boardname: "zannensmol_uf2/nrf52840/spi_clk", fileformat: "uf2", filename: "SlimeNRF_ZannenSmol_SPI_CLK_Tracker"},
+                  {boardname: "zannensmolair_uf2/nrf52833/i2c", fileformat: "uf2", filename: "SlimeNRF_ZannenSmolAir_I2C_Tracker"},
+                  {boardname: "zannensmolair_uf2/nrf52833/spi", fileformat: "uf2", filename: "SlimeNRF_ZannenSmolAir_SPI_Tracker"},
                 ]
     runs-on: ubuntu-latest
     steps:

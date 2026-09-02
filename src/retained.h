@@ -45,6 +45,13 @@ struct retained_data {
 	int16_t battery_pptt_saved;
 	uint64_t battery_runtime_saved;
 
+	/* Cumulative awake time without a receiver connection (ms).
+	 * Accumulated across WOM cycles (System OFF reboots), reset when a
+	 * connection is established and when the connection timeout shutdown
+	 * fires, so the next wake starts a fresh timeout period.
+	 */
+	uint64_t no_connection_awake_ms;
+
 	/* Calibrated discharge curve */
 	int16_t battery_pptt_curve[18];
 

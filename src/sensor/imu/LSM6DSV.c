@@ -284,17 +284,30 @@ uint8_t lsm_setup_DRDY(uint16_t threshold)
 	return NRF_GPIO_PIN_PULLUP << 4 | NRF_GPIO_PIN_SENSE_LOW; // active low
 }
 
+// Map the requested WOM ODR down to the nearest supported rate
+#if CONFIG_WOM_ACCEL_ODR >= 240
+#define LSM_WOM_ODR ODR_240Hz
+#elif CONFIG_WOM_ACCEL_ODR >= 120
+#define LSM_WOM_ODR ODR_120Hz
+#elif CONFIG_WOM_ACCEL_ODR >= 60
+#define LSM_WOM_ODR ODR_60Hz
+#elif CONFIG_WOM_ACCEL_ODR >= 30
+#define LSM_WOM_ODR ODR_30Hz
+#else
+#define LSM_WOM_ODR ODR_15Hz
+#endif
+
 uint8_t lsm_setup_WOM(void)
 { // TODO: should be off by the time WOM will be setup
 //	ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL1, ODR_OFF); // set accel off
 //	ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL2, ODR_OFF); // set gyro off
 
 	int err = ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL8, 0xE0 | FS_XL_8G); // set accel FS, set HP_LPF2_XL_BW to lowest bandwidth, enable HP_REF_MODE (set HP_LPF2_XL_BW)
-	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL1, OP_MODE_XL_LP1 << 4 | ODR_240Hz); // set accel low power mode 1, set accel ODR (enable accel)
+	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL1, OP_MODE_XL_LP1 << 4 | LSM_WOM_ODR); // set accel low power mode 1, set accel ODR (enable accel)
 	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_CTRL9, 0x50); // enable HP_REF_MODE (set HP_REF_MODE_XL and HP_SLOPE_XL_EN)
 	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_TAP_CFG0, 0x10); // set SLOPE_FDS
 	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_WAKE_UP_THS, 0x04); // set threshold, 4 * 7.8125 mg is ~31.25 mg
-	k_msleep(11); // need to wait for accel to settle
+	k_msleep(MAX(11, 3000 / CONFIG_WOM_ACCEL_ODR)); // need to wait for accel to settle, longer at lower ODR
 
 	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_FUNCTIONS_ENABLE, 0x80); // enable interrupts
 	err |= ssi_reg_write_byte(SENSOR_INTERFACE_DEV_IMU, LSM6DSV_MD1_CFG, 0x20); // route wake-up to INT1
