@@ -510,7 +510,7 @@ static bool no_conn_counting = true; // currently in a disconnected stretch
 
 int64_t esb_no_connection_awake_ms(void)
 {
-	int64_t total = retained->no_connection_awake_ms;
+	int64_t total = (int64_t)retained->no_connection_awake_s * 1000;
 	if (no_conn_counting)
 		total += k_uptime_get() - no_conn_session_start;
 	return total;
@@ -518,14 +518,14 @@ int64_t esb_no_connection_awake_ms(void)
 
 void esb_no_connection_flush(void)
 {
-	retained->no_connection_awake_ms = esb_no_connection_awake_ms();
+	retained->no_connection_awake_s = (uint32_t)(esb_no_connection_awake_ms() / 1000);
 	no_conn_session_start = k_uptime_get();
 	retained_update();
 }
 
 static void esb_no_connection_reset(void) // called when the link is (re)established
 {
-	retained->no_connection_awake_ms = 0;
+	retained->no_connection_awake_s = 0;
 	no_conn_session_start = k_uptime_get();
 	no_conn_counting = false;
 	retained_update();

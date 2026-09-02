@@ -35,6 +35,15 @@ struct retained_data {
 	int16_t max_battery_pptt;
 	int16_t min_battery_pptt;
 
+	/* Cumulative awake time without a receiver connection (seconds).
+	 * Accumulated across WOM cycles (System OFF reboots), reset when a
+	 * connection is established and when the connection timeout shutdown
+	 * fires, so the next wake starts a fresh timeout period.
+	 * Placed into the alignment padding before battery_uptime_latest,
+	 * keep the struct within the 1 KB limit.
+	 */
+	uint32_t no_connection_awake_s;
+
 	/* Battery uptime from last retained update */
 	uint64_t battery_uptime_latest;
 
@@ -44,13 +53,6 @@ struct retained_data {
 	/* Last interval stored in NVS */
 	int16_t battery_pptt_saved;
 	uint64_t battery_runtime_saved;
-
-	/* Cumulative awake time without a receiver connection (ms).
-	 * Accumulated across WOM cycles (System OFF reboots), reset when a
-	 * connection is established and when the connection timeout shutdown
-	 * fires, so the next wake starts a fresh timeout period.
-	 */
-	uint64_t no_connection_awake_ms;
 
 	/* Calibrated discharge curve */
 	int16_t battery_pptt_curve[18];
