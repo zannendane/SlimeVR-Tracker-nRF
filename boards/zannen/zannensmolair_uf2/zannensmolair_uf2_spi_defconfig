@@ -26,12 +26,9 @@ CONFIG_BATTERY_SAMPLE_INTERVAL_MS=5000
 # Enter deep sleep only after 1 week of cumulative awake time without a
 # receiver connection (survives WOM cycles), 7 * 24 * 60 * 60 * 1000 ms
 CONFIG_CONNECTION_TIMEOUT_DELAY=604800000
-# IMU mounting rotation: Z -90 from the PCB-derived correction (verified by
-# on-device axis tests), plus a yaw fix (front face pointed right): Y -90
-CONFIG_SENSOR_ROTATION_CUSTOM=y
-CONFIG_SENSOR_ROTATION_CUSTOM_X=0
-CONFIG_SENSOR_ROTATION_CUSTOM_Y=-90
-CONFIG_SENSOR_ROTATION_CUSTOM_Z=-90
+# IMU mounting rotation, verified by on-device axis tests
+# (correction is Z -90 degrees)
+CONFIG_SENSOR_ROTATION_270=y
 
 # Wider full scales for motion saturation robustness (noise density is
 # range-independent, so there is no tracking quality penalty)
