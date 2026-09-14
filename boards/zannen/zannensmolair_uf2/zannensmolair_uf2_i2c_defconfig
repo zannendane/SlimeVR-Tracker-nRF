@@ -28,8 +28,9 @@ CONFIG_BATTERY_SAMPLE_INTERVAL_MS=5000
 CONFIG_CONNECTION_TIMEOUT_DELAY=604800000
 # IMU mounting rotation derived from the PCB: with USB up and the component
 # side facing out, the LSM6DSV die frame maps to the device frame by +90
-# degrees about Z, so the correction quaternion is its inverse, Z-90
-CONFIG_SENSOR_ROTATION_270=y
+# degrees about Z (correction Z-90), plus an additional -90 requested on top,
+# total Z-180
+CONFIG_SENSOR_ROTATION_180=y
 
 # Wider full scales for motion saturation robustness (noise density is
 # range-independent, so there is no tracking quality penalty)
