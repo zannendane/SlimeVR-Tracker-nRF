@@ -26,11 +26,12 @@ CONFIG_BATTERY_SAMPLE_INTERVAL_MS=5000
 # Enter deep sleep only after 1 week of cumulative awake time without a
 # receiver connection (survives WOM cycles), 7 * 24 * 60 * 60 * 1000 ms
 CONFIG_CONNECTION_TIMEOUT_DELAY=604800000
-# IMU mounting rotation derived from the PCB: with USB up and the component
-# side facing out, the LSM6DSV die frame maps to the device frame by +90
-# degrees about Z (correction Z-90), plus an additional -90 requested on top,
-# total Z-180
-CONFIG_SENSOR_ROTATION_180=y
+# Custom mounting rotation: X +90, then Z -90 (equivalent to the previous
+# Z-180 correction plus Z +90 and then Y -90 on top)
+CONFIG_SENSOR_ROTATION_CUSTOM=y
+CONFIG_SENSOR_ROTATION_CUSTOM_X=90
+CONFIG_SENSOR_ROTATION_CUSTOM_Y=0
+CONFIG_SENSOR_ROTATION_CUSTOM_Z=-90
 
 # Wider full scales for motion saturation robustness (noise density is
 # range-independent, so there is no tracking quality penalty)

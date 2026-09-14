@@ -836,9 +836,10 @@ static void calibration_thread(void)
 		{
 			printk("Magnetometer calibration data is empty or invalid.\n");
 			printk("Waiting for sensor to initialize...\n");
-			// Wait for sensor to be ready (timeout 30s)
+			// Wait for the sensor scan to finish: until the magnetometer is
+			// found, the sensor init fails, or timeout (30s)
 			int64_t wait_start = k_uptime_get();
-			while (get_status(SYS_STATUS_SENSOR_ERROR) && k_uptime_get() - wait_start < 30000)
+			while (!sensor_mag_available() && !get_status(SYS_STATUS_SENSOR_ERROR) && k_uptime_get() - wait_start < 30000)
 				k_msleep(100);
 			// Check if mag is available
 			if (sensor_mag_available())
