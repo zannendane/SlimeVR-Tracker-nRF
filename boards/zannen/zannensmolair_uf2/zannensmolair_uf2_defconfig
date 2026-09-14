@@ -26,12 +26,12 @@ CONFIG_BATTERY_SAMPLE_INTERVAL_MS=5000
 # Enter deep sleep only after 1 week of cumulative awake time without a
 # receiver connection (survives WOM cycles), 7 * 24 * 60 * 60 * 1000 ms
 CONFIG_CONNECTION_TIMEOUT_DELAY=604800000
-# Custom mounting rotation: 180 degrees around X, then 5 degrees clockwise
-# around Z (-50 degrees from before plus another +45 degrees)
+# Custom mounting rotation: equivalent to 175 degrees around Z
+# (X180 + Y180 = Z180, plus -5 degrees from the previous adjustments)
 CONFIG_SENSOR_ROTATION_CUSTOM=y
-CONFIG_SENSOR_ROTATION_CUSTOM_X=180
+CONFIG_SENSOR_ROTATION_CUSTOM_X=0
 CONFIG_SENSOR_ROTATION_CUSTOM_Y=0
-CONFIG_SENSOR_ROTATION_CUSTOM_Z=-5
+CONFIG_SENSOR_ROTATION_CUSTOM_Z=175
 
 # Wider full scales for motion saturation robustness (noise density is
 # range-independent, so there is no tracking quality penalty)
