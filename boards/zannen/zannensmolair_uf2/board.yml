@@ -1,0 +1,17 @@
+# Copyright (c) 2024 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+# ZannenSmolAir is a compact SlimeVR smol tracker based on nRF52833-QDAA,
+# LSM6DSV IMU and QMC6309 magnetometer (behind the IMU AUX I2C).
+# The i2c variant talks to the IMU over I2C (magnetometer enabled),
+# the spi variant talks to the IMU over SPI (magnetometer disabled).
+
+board:
+  name: zannensmolair_uf2
+  full_name: ZannenSmolAir
+  vendor: zannen
+  socs:
+    - name: nrf52833
+      variants:
+      - name: 'i2c'
+      - name: 'spi'

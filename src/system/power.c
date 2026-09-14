@@ -41,6 +41,7 @@ static bool plugged = false;
 static bool power_init = false;
 static bool device_plugged = false;
 static bool device_charged = false;
+static bool charger_fault = false; // charge and standby status active at the same time, indicates charger fault or damage
 
 static bool chg_temp_warn = false;
 static int64_t last_valid_temp = -1;
@@ -170,6 +171,7 @@ static void configure_system_off(void)
 	set_led(SYS_LED_PATTERN_OFF_FORCE, SYS_LED_PRIORITY_HIGHEST);
 	float actual_clock_rate;
 	set_sensor_clock(false, 0, &actual_clock_rate);
+	esb_no_connection_flush(); // persist the session's disconnected time, it survives this sleep
 	// Configure interrupts
 	configure_sense_pins();
 }
@@ -527,6 +529,15 @@ static void power_thread(void)
 		bool charging = chg_read();
 		bool charged = stby_read();
 
+		// Normal charger states are mutually exclusive (charging / charged / idle),
+		// both status lines active at the same time means charger fault or damage
+		bool charger_fault_now = charging && charged;
+		if (charger_fault_now && !charger_fault)
+			LOG_ERR("Charger fault detected (charge and standby status both active)");
+		else if (!charger_fault_now && charger_fault)
+			LOG_INF("Charger fault cleared");
+		charger_fault = charger_fault_now;
+
 		float die_temp;
 		float sensor_temp;
 		int sys_ret = sys_get_die_temperature(&die_temp);
@@ -560,10 +571,23 @@ static void power_thread(void)
 		// chg_ret = 0 and chg_temp_warn = true: out of temp range, charger is disabled or already has thermistor
 		LOG_DBG("Die: %.2f C, Sensor: %.2f C, sys: %d, sensor: %d, wrn: %d, plugged: %d, ret: %d", (double)die_temp, (double)sensor_temp, sys_ret, sensor_ret, chg_temp_warn, device_plugged, chg_ret);
 
-		int battery_mV;
-		int16_t battery_pptt = read_batt_mV(&battery_mV);
-		if (battery_pptt < 0)
-			LOG_ERR("Failed to read battery voltage: %d", battery_pptt);
+		// Battery voltage is a slow-changing quantity, only re-measure it every
+		// CONFIG_BATTERY_SAMPLE_INTERVAL_MS to save divider/ADC power, reuse the
+		// last reading in between
+		static int battery_mV;
+		static int16_t battery_pptt;
+#if CONFIG_BATTERY_SAMPLE_INTERVAL_MS > 100
+		static int64_t last_batt_read = -CONFIG_BATTERY_SAMPLE_INTERVAL_MS; // force a read on the first cycle
+		if (k_uptime_get() - last_batt_read >= CONFIG_BATTERY_SAMPLE_INTERVAL_MS)
+		{
+			last_batt_read = k_uptime_get();
+#endif
+			battery_pptt = read_batt_mV(&battery_mV);
+			if (battery_pptt < 0)
+				LOG_ERR("Failed to read battery voltage: %d", battery_pptt);
+#if CONFIG_BATTERY_SAMPLE_INTERVAL_MS > 100
+		}
+#endif
 		if (samples < BATTERY_SAMPLES)
 			samples++;
 
@@ -592,7 +616,7 @@ static void power_thread(void)
 			set_status(SYS_STATUS_PLUGGED, false);
 		}
 
-		device_charged = charged; // TODO: timer on device_plugged could be used to infer charged state
+		device_charged = charged && !charger_fault; // TODO: timer on device_plugged could be used to infer charged state
 
 		static bool adc_abnormal = false;
 		if (!power_init)
@@ -641,12 +665,12 @@ static void power_thread(void)
 
 		connection_update_battery(battery_available, device_plugged, device_charged, calibrated_battery_pptt, battery_mV);
 
-		if ((adc_abnormal || chg_ret) && !get_status(SYS_STATUS_SYSTEM_ERROR))
+		if ((adc_abnormal || chg_ret || charger_fault) && !get_status(SYS_STATUS_SYSTEM_ERROR))
 			set_status(SYS_STATUS_SYSTEM_ERROR, true);
-		else if ((!adc_abnormal && !chg_ret) && get_status(SYS_STATUS_SYSTEM_ERROR))
+		else if ((!adc_abnormal && !chg_ret && !charger_fault) && get_status(SYS_STATUS_SYSTEM_ERROR))
 			set_status(SYS_STATUS_SYSTEM_ERROR, false);
 
-		if (chg_ret)
+		if (chg_ret || charger_fault)
 			set_led(SYS_LED_PATTERN_CRITICAL, SYS_LED_PRIORITY_CRITICAL);
 		else
 			set_led(SYS_LED_PATTERN_OFF, SYS_LED_PRIORITY_CRITICAL);

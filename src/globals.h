@@ -66,6 +66,9 @@
 #define SENSOR_QUATERNION_CORRECTION 0.0f, 0.0f, 1.0f, 0.0f
 #elif defined(CONFIG_SENSOR_ROTATION_270_FLIPPED)
 #define SENSOR_QUATERNION_CORRECTION 0.0f, 0.70710678f, 0.70710678f, 0.0f
+#elif defined(CONFIG_SENSOR_ROTATION_CUSTOM)
+// placeholder, computed at runtime from CONFIG_SENSOR_ROTATION_CUSTOM_{X,Y,Z} in sensor_init
+#define SENSOR_QUATERNION_CORRECTION 1.0f, 0.0f, 0.0f, 0.0f
 #endif
 
 #endif

@@ -33,6 +33,7 @@
 #include "sensors.h"
 
 #include "sensor.h"
+#include "tap_detect.h"
 
 #define SPI_OP SPI_MODE_CPOL | SPI_MODE_CPHA | SPI_WORD_SET(8)
 
@@ -165,6 +166,11 @@ const char *sensor_get_sensor_fusion_name(void)
 	if (fusion_id < 0 || fusion_id >= FUSION_COUNT)
 		return "None";
 	return fusion_names[fusion_id];
+}
+
+bool sensor_mag_available(void)
+{
+	return mag_available;
 }
 
 int sensor_get_sensor_temperature(float *ptr)
@@ -759,6 +765,22 @@ int sensor_init(void)
 	LOG_INF("Using %s", fusion_names[fusion_id]);
 	LOG_INF("Initialized fusion");
 	sensor_fusion_init = true;
+#if defined(CONFIG_SENSOR_ROTATION_CUSTOM)
+	// Custom mounting rotation from euler angles (degrees), applied roll (X)
+	// first, then pitch (Y), then yaw (Z), same order as the flipped presets
+	const float half_deg_to_rad = 3.14159265358979f / 360.0f;
+	float hx = CONFIG_SENSOR_ROTATION_CUSTOM_X * half_deg_to_rad;
+	float hy = CONFIG_SENSOR_ROTATION_CUSTOM_Y * half_deg_to_rad;
+	float hz = CONFIG_SENSOR_ROTATION_CUSTOM_Z * half_deg_to_rad;
+	float qx[4] = {cosf(hx), sinf(hx), 0, 0};
+	float qy[4] = {cosf(hy), 0, sinf(hy), 0};
+	float qz[4] = {cosf(hz), 0, 0, sinf(hz)};
+	float qt[4];
+	q_multiply(qz, qy, qt); // qt = qz * qy
+	q_multiply(qt, qx, q3); // q3 = qz * qy * qx
+	LOG_INF("Custom sensor rotation: X=%d Y=%d Z=%d", CONFIG_SENSOR_ROTATION_CUSTOM_X, CONFIG_SENSOR_ROTATION_CUSTOM_Y, CONFIG_SENSOR_ROTATION_CUSTOM_Z);
+#endif
+	tap_detect_reset();
 	return 0;
 }
 
@@ -856,7 +878,7 @@ void sensor_loop(void)
 			// Read magnetometer
 			float raw_m[3];
 			bool mag_read = false;
-			if (mag_available && mag_enabled && (k_uptime_get() - last_mag_time > mag_interval)) // some magnetometer do not have int pin // TODO: implement for magnetometer that does, or read status byte
+			if (mag_available && mag_enabled && !(IS_ENABLED(CONFIG_MAG_IGNORE_WHILE_CHARGING) && chg_read()) && (k_uptime_get() - last_mag_time > mag_interval)) // some magnetometer do not have int pin // TODO: implement for magnetometer that does, or read status byte
 			{
 				mag_read = true;
 				sensor_mag->mag_read(raw_m); // reading mag last, and it will be processed last
@@ -921,6 +943,7 @@ void sensor_loop(void)
 					int64_t fuse_time = k_uptime_ticks();
 #endif
 					sensor_fusion->update_gyro(g, gyro_actual_time);
+					tap_detect_gyro(g);
 #if DEBUG
 					if (valid_acquisition)
 						total_gyro_fuse_time += k_uptime_ticks() - fuse_time;
@@ -955,6 +978,7 @@ void sensor_loop(void)
 					int64_t fuse_time = k_uptime_ticks();
 #endif
 					sensor_fusion->update_accel(a, accel_actual_time);
+					tap_detect_process(a, accel_actual_time);
 #if DEBUG
 					if (valid_acquisition)
 						total_accel_fuse_time += k_uptime_ticks() - fuse_time;
@@ -1190,4 +1214,23 @@ void main_imu_restart(void)
 {
 	if (main_ok) // only restart fusion if initialized
 		sensor_fusion->init(gyro_actual_time, accel_actual_time, mag_actual_time);
+}
+
+int sensor_debug_read_imu(float a[3], float g[3])
+{
+	if (!main_ok || sensor_imu == &sensor_imu_none)
+		return -1;
+	sys_interface_resume();
+	sensor_imu->accel_read(a);
+	sensor_imu->gyro_read(g);
+	return 0;
+}
+
+int sensor_debug_read_mag(float m[3])
+{
+	if (!mag_available || !mag_enabled || sensor_mag == &sensor_mag_none)
+		return -1;
+	sys_interface_resume();
+	sensor_mag->mag_read(m);
+	return 0;
 }

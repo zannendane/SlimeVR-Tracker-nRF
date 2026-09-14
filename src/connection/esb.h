@@ -59,4 +59,9 @@ void esb_write(uint8_t *data); // TODO: give packets some names
 
 bool esb_ready(void);
 
+// Cumulative awake time without a receiver connection (ms), persists across WOM cycles
+int64_t esb_no_connection_awake_ms(void);
+// Merge the current session's disconnected time into retained memory (call before sleeping)
+void esb_no_connection_flush(void);
+
 #endif

@@ -502,6 +502,35 @@ bool esb_ready(void)
 	return esb_initialized && esb_paired;
 }
 
+// Cumulative awake time without a receiver connection, kept in retained memory
+// so it persists across WOM cycles (System OFF reboots). Session time is
+// accumulated here and merged into the retained value on flush (before sleep)
+static int64_t no_conn_session_start = 0; // start of the current disconnected stretch (uptime)
+static bool no_conn_counting = true; // currently in a disconnected stretch
+
+int64_t esb_no_connection_awake_ms(void)
+{
+	int64_t total = (int64_t)retained->no_connection_awake_s * 1000;
+	if (no_conn_counting)
+		total += k_uptime_get() - no_conn_session_start;
+	return total;
+}
+
+void esb_no_connection_flush(void)
+{
+	retained->no_connection_awake_s = (uint32_t)(esb_no_connection_awake_ms() / 1000);
+	no_conn_session_start = k_uptime_get();
+	retained_update();
+}
+
+static void esb_no_connection_reset(void) // called when the link is (re)established
+{
+	retained->no_connection_awake_s = 0;
+	no_conn_session_start = k_uptime_get();
+	no_conn_counting = false;
+	retained_update();
+}
+
 static void esb_thread(void)
 {
 	bool use_hid = CONFIG_0_SETTINGS_READ(CONFIG_0_CONNECTION_OVER_HID);
@@ -522,15 +551,27 @@ static void esb_thread(void)
 		{
 			if (!get_status(SYS_STATUS_CONNECTION_ERROR) && (!use_hid || !get_status(SYS_STATUS_USB_CONNECTED))) // only raise error while not potentially communicating by usb
 				set_status(SYS_STATUS_CONNECTION_ERROR, true);
-			if (use_shutdown && k_uptime_get() - last_tx_success > CONFIG_3_SETTINGS_READ(CONFIG_3_CONNECTION_TIMEOUT_DELAY)) // shutdown if receiver is not detected // TODO: is shutdown necessary if usb is connected at the time?
-			{
-				LOG_WRN("No response from receiver in %dm", CONFIG_3_SETTINGS_READ(CONFIG_3_CONNECTION_TIMEOUT_DELAY) / 60000);
-				sys_request_system_off(false);
-			}
 		}
 		else if (tx_errors < TX_ERROR_THRESHOLD && get_status(SYS_STATUS_CONNECTION_ERROR) && k_uptime_get() - last_tx_fail > 3000) // TODO: there is possibly some race condition causing tx_error to potentially be above zero more often than not, so the check is more lenient; tx_error under threshold and last errors above threshold was not recent
 		{
 			set_status(SYS_STATUS_CONNECTION_ERROR, false);
+		}
+
+		// Track cumulative awake time without a receiver connection, persists across WOM cycles
+		bool link_up = (esb_paired && tx_errors < TX_ERROR_THRESHOLD) || (use_hid && get_status(SYS_STATUS_USB_CONNECTED));
+		if (link_up && no_conn_counting)
+			esb_no_connection_reset();
+		else if (!link_up && !no_conn_counting)
+		{
+			no_conn_counting = true;
+			no_conn_session_start = k_uptime_get();
+		}
+
+		if (use_shutdown && (!use_hid || !get_status(SYS_STATUS_USB_CONNECTED)) && esb_no_connection_awake_ms() > CONFIG_3_SETTINGS_READ(CONFIG_3_CONNECTION_TIMEOUT_DELAY)) // shutdown if receiver is not connected for too long (cumulative, survives WOM)
+		{
+			LOG_WRN("No connection to receiver in %lld minutes total", esb_no_connection_awake_ms() / 60000);
+			esb_no_connection_reset(); // allow a fresh timeout period after the next wake
+			sys_request_system_off(false);
 		}
 		k_msleep(100);
 	}
