@@ -44,6 +44,13 @@
 #define SENSOR_MAGNETOMETER_AXES_ALIGNMENT -mx, mz, -my
 #endif
 
+#if defined(CONFIG_BOARD_ZANNENSMOLAIR_UF2)
+// ZannenSmolAir: QMC6309 die sits 180 degrees rotated in-plane, LSM6DSV 90
+// degrees CCW relative to their datasheet reference orientations; mapping the
+// magnetometer into the IMU body frame: (-my, mx, mz)
+#define SENSOR_MAGNETOMETER_AXES_ALIGNMENT -my, mx, mz
+#endif
+
 #ifndef SENSOR_MAGNETOMETER_AXES_ALIGNMENT
 // mag axes alignment to sensor body
 #define SENSOR_MAGNETOMETER_AXES_ALIGNMENT my, -mx, -mz
