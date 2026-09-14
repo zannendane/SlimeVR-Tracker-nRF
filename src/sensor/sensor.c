@@ -765,6 +765,21 @@ int sensor_init(void)
 	LOG_INF("Using %s", fusion_names[fusion_id]);
 	LOG_INF("Initialized fusion");
 	sensor_fusion_init = true;
+#if defined(CONFIG_SENSOR_ROTATION_CUSTOM)
+	// Custom mounting rotation from euler angles (degrees), applied roll (X)
+	// first, then pitch (Y), then yaw (Z), same order as the flipped presets
+	const float half_deg_to_rad = 3.14159265358979f / 360.0f;
+	float hx = CONFIG_SENSOR_ROTATION_CUSTOM_X * half_deg_to_rad;
+	float hy = CONFIG_SENSOR_ROTATION_CUSTOM_Y * half_deg_to_rad;
+	float hz = CONFIG_SENSOR_ROTATION_CUSTOM_Z * half_deg_to_rad;
+	float qx[4] = {cosf(hx), sinf(hx), 0, 0};
+	float qy[4] = {cosf(hy), 0, sinf(hy), 0};
+	float qz[4] = {cosf(hz), 0, 0, sinf(hz)};
+	float qt[4];
+	q_multiply(qz, qy, qt); // qt = qz * qy
+	q_multiply(qt, qx, q3); // q3 = qz * qy * qx
+	LOG_INF("Custom sensor rotation: X=%d Y=%d Z=%d", CONFIG_SENSOR_ROTATION_CUSTOM_X, CONFIG_SENSOR_ROTATION_CUSTOM_Y, CONFIG_SENSOR_ROTATION_CUSTOM_Z);
+#endif
 	tap_detect_reset();
 	return 0;
 }

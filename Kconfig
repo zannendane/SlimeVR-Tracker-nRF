@@ -276,6 +276,32 @@ config SENSOR_ROTATION_180_FLIPPED
 config SENSOR_ROTATION_270_FLIPPED
     bool "270 degrees flipped"
 
+config SENSOR_ROTATION_CUSTOM
+    bool "Custom angles"
+
+config SENSOR_ROTATION_CUSTOM_X
+    int "Custom rotation around X axis (degrees)"
+    default 0
+    range -360 360
+    depends on SENSOR_ROTATION_CUSTOM
+    help
+        Custom mounting rotation, applied as roll (X) first, then pitch (Y),
+        then yaw (Z), same composition order as the flipped presets.
+        Positive angles follow the right-hand rule around the positive axis,
+        so a clockwise yaw seen from above is negative.
+
+config SENSOR_ROTATION_CUSTOM_Y
+    int "Custom rotation around Y axis (degrees)"
+    default 0
+    range -360 360
+    depends on SENSOR_ROTATION_CUSTOM
+
+config SENSOR_ROTATION_CUSTOM_Z
+    int "Custom rotation around Z axis (degrees)"
+    default 0
+    range -360 360
+    depends on SENSOR_ROTATION_CUSTOM
+
 endchoice
 
 menu "Sensor power saving"
