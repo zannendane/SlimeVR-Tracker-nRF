@@ -49,7 +49,8 @@ void tap_detect_reset(void)
 	last_gyro_mag = 0.0f;
 	in_shock = false;
 	shock_duration = 0.0f;
-	refractory_until = 0;
+	// ignore input while the IMU output and the baseline settle after (re)init
+	refractory_until = k_uptime_get() + 250;
 }
 
 void tap_detect_gyro(const float g[3])
