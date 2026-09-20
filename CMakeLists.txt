@@ -44,6 +44,10 @@ list(GET GIT_RELEASE 2 GIT_PATCH)
 
 configure_file(${CMAKE_SOURCE_DIR}/VERSION_SRC ${CMAKE_SOURCE_DIR}/VERSION @ONLY)
 
+# Upstream SlimeNRF base commit for version annotation.
+# Update this when rebasing/merging onto a newer upstream SlimeNRF.
+set(SLIMENRF_BASE_VERSION "aa93e5c" CACHE STRING "Upstream SlimeNRF base commit")
+
 # Zephyr
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(NONE)
@@ -56,6 +60,8 @@ target_sources(app PRIVATE ${app_sources})
 
 FILE(GLOB_RECURSE files vqf-c/src/*.c)
 target_sources(app PRIVATE ${files})
+
+target_compile_definitions(app PRIVATE SLIMENRF_BASE_COMMIT="${SLIMENRF_BASE_VERSION}")
 
 target_include_directories(app PRIVATE src)
 target_include_directories(app PRIVATE vqf-c/src)

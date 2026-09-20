@@ -66,6 +66,10 @@ west build --board <BOARD> --pristine=always <this-repo> --build-dir build \
   (major/minor/patch from tags, branch as extra version). `VERSION` is gitignored
   — never hand-edit it; edit `VERSION_SRC` only if changing the template. Builds
   outside a git checkout fall back to `0.0.0-0` / `unknown`.
+- `SLIMENRF_BASE_VERSION` (`CMakeLists.txt`) records the upstream SlimeNRF
+  commit this fork is based on; it is baked into the version banner
+  (`slimenrf:<commit>`). Update it to the new merge-base commit hash after
+  every rebase/merge onto newer upstream.
 - `src/build_defines.h` is force-touched on every build (`touch_util_h` target)
   to refresh the compile timestamp. Don't be surprised by it being "modified".
 - Board variants are encoded as `_<qualifier>` files inside

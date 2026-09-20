@@ -47,6 +47,9 @@ CONFIG_BUILD_OUTPUT_UF2_FAMILY_ID="0x621e937a"
 # (actions go through sys_reset_mode like reset counting, requires USER_EXTRA_ACTIONS)
 CONFIG_USER_EXTRA_ACTIONS=y
 CONFIG_USE_IMU_TAP=y
+# Tap interaction compiled in, but disabled at factory default
+# (persistent runtime setting: toggle with console 'tap on'/'tap off')
+CONFIG_USE_IMU_TAP_DEFAULT=n
 
 # Magnetometer support compiled in, but disabled at factory default
 # (persistent runtime setting: toggle with console 'mag on'/'mag off')

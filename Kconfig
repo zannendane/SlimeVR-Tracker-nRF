@@ -163,6 +163,15 @@ config USE_IMU_TAP
         (WOM) state any tap is motion and already wakes the system, no
         additional configuration is needed there.
 
+config USE_IMU_TAP_DEFAULT
+    bool "Tap interaction enabled by default"
+    default y
+    depends on USE_IMU_TAP
+    help
+        Default state of the tap interaction enable setting on factory
+        firmware. The state is a persistent runtime setting (stored in NVS)
+        and can be toggled later with the console 'tap on'/'tap off' commands
+        or 'write_config use_imu_tap'.
 config IMU_TAP_THRESHOLD
     int "Tap detection threshold (mg)"
     default 600

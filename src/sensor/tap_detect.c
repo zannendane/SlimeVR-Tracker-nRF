@@ -60,6 +60,12 @@ void tap_detect_gyro(const float g[3])
 
 void tap_detect_process(const float a[3], float dt)
 {
+	if (!CONFIG_1_SETTINGS_READ(CONFIG_1_USE_IMU_TAP)) // tap interaction is switched off (persistent runtime setting)
+	{
+		tap_detect_reset(); // keep the detector state clean while disabled
+		return;
+	}
+
 	if (get_status(SYS_STATUS_CALIBRATION_RUNNING))
 		return; // taps are not user input while calibrating
 

@@ -502,6 +502,10 @@ static void print_help(void)
 	printk("mag                          Show magnetometer state\n");
 	printk("calibrate_mag                Magnetometer calibration channel (clears existing data first)\n");
 #endif
+#if CONFIG_USE_IMU_TAP
+	printk("tap on|off                   Enable or disable tap interaction (persistent)\n");
+	printk("tap                          Show tap interaction state\n");
+#endif
 	printk("\ndebug_imu                    Print real-time IMU data (accel in g, gyro in deg/s)\n");
 #if SENSOR_MAG_EXISTS
 	printk("debug_mag                    Print real-time magnetometer data\n");
@@ -565,6 +569,9 @@ static void console_thread(void)
 #if SENSOR_MAG_EXISTS
 	const char command_mag[] = "mag";
 	const char command_calibrate_mag[] = "calibrate_mag";
+#endif
+#if CONFIG_USE_IMU_TAP
+	const char command_tap[] = "tap";
 #endif
 	const char command_set[] = "set";
 	const char command_pair[] = "pair";
@@ -678,6 +685,30 @@ static void console_thread(void)
 			printk("Please rotate the device to cover all 6 sides (-X +X -Y +Y -Z +Z).\n");
 			sensor_calibration_clear_mag(NULL, true);
 			sensor_request_calibration_mag();
+		}
+#endif
+#if CONFIG_USE_IMU_TAP
+		else if (strcmp(argv[0], command_tap) == 0)
+		{
+			if (argc == 2 && strcmp(argv[1], "on") == 0)
+			{
+				config_1_settings_write(CONFIG_1_USE_IMU_TAP, true);
+				printk("Tap interaction enabled\n");
+			}
+			else if (argc == 2 && strcmp(argv[1], "off") == 0)
+			{
+				config_1_settings_write(CONFIG_1_USE_IMU_TAP, false);
+				printk("Tap interaction disabled\n");
+			}
+			else if (argc == 1)
+			{
+				printk("Tap interaction: %s\n", CONFIG_1_SETTINGS_READ(CONFIG_1_USE_IMU_TAP) ? "enabled" : "disabled");
+				printk("Usage: tap on|off\n");
+			}
+			else
+			{
+				printk("Usage: tap on|off\n");
+			}
 		}
 #endif
 		else if (strcmp(argv[0], command_set) == 0)
