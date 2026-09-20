@@ -383,6 +383,19 @@ static void button_thread(void)
 		}
 		if (press_time && k_uptime_get() - press_time > 1000 && button_read()) // Button is being held
 		{
+#if CONFIG_BUTTON_ZANNENSMOL_LAYOUT
+			if (k_uptime_get() - press_time > 2000) // held for 2 seconds, deep sleep
+			{
+				LOG_INF("Deep sleep requested");
+				if (!sys_user_shutdown()) // shutdown performed (returns 0)
+					k_thread_abort(button_thread_id);
+				else // shutdown not enabled, clear press
+				{
+					press_time = 0;
+					set_status(SYS_STATUS_BUTTON_PRESSED, false);
+				}
+			}
+#else
 			if (sys_user_shutdown()) // held for 1 second, reset pairing
 			{
 				LOG_INF("Pairing requested");
@@ -394,6 +407,7 @@ static void button_thread(void)
 			{
 				k_thread_abort(button_thread_id);
 			}
+#endif
 		}
 		if (!press_time && !last_press)
 			k_thread_suspend(button_thread_id);
@@ -482,6 +496,26 @@ int sys_user_shutdown(void)
 
 void sys_reset_mode(uint8_t mode)
 {
+#if CONFIG_BUTTON_ZANNENSMOL_LAYOUT
+	switch (mode)
+	{
+	case 0: // 1 press - Reset
+		LOG_INF("Reset requested");
+		sys_request_system_reboot(false);
+		break;
+	case 1: // 2 presses - Calibration
+		LOG_INF("IMU calibration requested");
+		sensor_request_calibration();
+		break;
+	case 2: // 3 presses - Magnetometer Calibration
+		LOG_INF("Magnetometer calibration requested");
+		sensor_calibration_clear_mag(NULL, true);
+		sensor_request_calibration_mag();
+		break;
+	default:
+		break;
+	}
+#else
 	switch (mode)
 	{
 	case 1:
@@ -510,6 +544,7 @@ void sys_reset_mode(uint8_t mode)
 	default:
 		break;
 	}
+#endif
 }
 
 static void temp_thread(void)

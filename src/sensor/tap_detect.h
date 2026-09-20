@@ -20,30 +20,17 @@
 	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 	THE SOFTWARE.
 */
-#ifndef SLIMENRF_SENSOR_CALIBRATION
-#define SLIMENRF_SENSOR_CALIBRATION
+#ifndef SLIMENRF_SENSOR_TAP_DETECT_H
+#define SLIMENRF_SENSOR_TAP_DETECT_H
 
-/* Sensor feeds data to calibration */
-void sensor_calibration_process_accel(float a[3]);
-void sensor_calibration_process_gyro(float g[3]);
-void sensor_calibration_process_mag(float m[3]);
+// Reset the tap detector state (call when the IMU/fusion is (re)initialized)
+void tap_detect_reset(void);
 
-void sensor_calibration_update_sensor_ids(int imu);
-uint8_t *sensor_calibration_get_sensor_data();
+// Update the latest gyroscope magnitude (deg/s), used to reject taps while moving
+void tap_detect_gyro(const float g[3]);
 
-void sensor_calibration_read(void);
-
-int sensor_calibration_validate(float *a_bias, float *g_bias, bool write);
-int sensor_calibration_validate_6_side(float a_inv[][3], bool write);
-int sensor_calibration_validate_mag(float m_inv[][3], bool write);
-
-void sensor_calibration_clear(float *a_bias, float *g_bias, bool write);
-void sensor_calibration_clear_6_side(float a_inv[][3], bool write);
-void sensor_calibration_clear_mag(float m_inv[][3], bool write); // "request" mag cal
-bool sensor_calibration_mag_data_empty(void); // true if no magnetometer calibration data
-
-void sensor_request_calibration(void);
-void sensor_request_calibration_6_side(void);
-void sensor_request_calibration_mag(void);
+// Process one accelerometer sample (g) sampled dt seconds ago,
+// emits sys_tap_event(1) when a tap is recognized
+void tap_detect_process(const float a[3], float dt);
 
 #endif

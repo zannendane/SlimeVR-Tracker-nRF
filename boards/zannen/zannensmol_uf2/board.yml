@@ -1,0 +1,18 @@
+# Copyright (c) 2024 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+# ZannenSmol is a 1:1 replica of the SlimeVR official Smol ProMicro stacked solution.
+# Variants with _clk suffix enable external IMU clock (for ICM45686 config),
+# variants without _clk disable it (for LSM6DSV config).
+
+board:
+  name: zannensmol_uf2
+  full_name: ZannenSmol
+  vendor: zannen
+  socs:
+    - name: nrf52840
+      variants:
+      - name: 'i2c'
+      - name: 'spi'
+      - name: 'i2c_clk'
+      - name: 'spi_clk'

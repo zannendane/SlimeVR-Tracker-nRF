@@ -495,10 +495,20 @@ static void print_help(void)
 	printk("reboot                       Soft reset the device\n");
 	printk("battery                      Get battery information\n");
 	printk("\nscan                         Restart sensor scan\n");
-	printk("calibrate                    Calibrate sensor ZRO\n");
+	printk("calibrate                    Calibrate sensor ZRO (gyro/accel bias)\n");
 	printk("6-side                       Calibrate 6-side accelerometer\n");
 #if SENSOR_MAG_EXISTS
-	printk("mag                          Clear magnetometer calibration\n");
+	printk("mag on|off                   Enable or disable the magnetometer (persistent)\n");
+	printk("mag                          Show magnetometer state\n");
+	printk("calibrate_mag                Magnetometer calibration channel (clears existing data first)\n");
+#endif
+#if CONFIG_USE_IMU_TAP
+	printk("tap on|off                   Enable or disable tap interaction (persistent)\n");
+	printk("tap                          Show tap interaction state\n");
+#endif
+	printk("\ndebug_imu                    Print real-time IMU data (accel in g, gyro in deg/s)\n");
+#if SENSOR_MAG_EXISTS
+	printk("debug_mag                    Print real-time magnetometer data\n");
 #endif
 	printk("\nset <address>                Manually set receiver\n");
 	printk("pair                         Enter pairing mode\n");
@@ -518,6 +528,8 @@ static void print_help(void)
 	printk("write_config (base64|<config name>|<config id>) <value>\n");
 	printk("read_config (all|base64|<config name>|<config id>)\n");
 	printk("reset_config (all|<config name>|<config id>)\n");
+
+	printk("\nnvs                          Display NVS storage statistics\n");
 }
 
 static void console_thread(void)
@@ -556,6 +568,10 @@ static void console_thread(void)
 	const char command_6_side[] = "6-side";
 #if SENSOR_MAG_EXISTS
 	const char command_mag[] = "mag";
+	const char command_calibrate_mag[] = "calibrate_mag";
+#endif
+#if CONFIG_USE_IMU_TAP
+	const char command_tap[] = "tap";
 #endif
 	const char command_set[] = "set";
 	const char command_pair[] = "pair";
@@ -564,6 +580,10 @@ static void console_thread(void)
 	const char command_dfu[] = "dfu";
 #endif
 	const char command_meow[] = "meow";
+	const char command_debug_imu[] = "debug_imu";
+#if SENSOR_MAG_EXISTS
+	const char command_debug_mag[] = "debug_mag";
+#endif
 
 	// data
 	const char command_reset_data[] = "reset_data";
@@ -639,7 +659,56 @@ static void console_thread(void)
 #if SENSOR_MAG_EXISTS
 		else if (strcmp(argv[0], command_mag) == 0)
 		{
+			if (argc == 2 && strcmp(argv[1], "on") == 0)
+			{
+				config_1_settings_write(CONFIG_1_SENSOR_USE_MAG, true);
+				printk("Magnetometer enabled\n");
+			}
+			else if (argc == 2 && strcmp(argv[1], "off") == 0)
+			{
+				config_1_settings_write(CONFIG_1_SENSOR_USE_MAG, false);
+				printk("Magnetometer disabled\n");
+			}
+			else if (argc == 1)
+			{
+				printk("Magnetometer: %s\n", CONFIG_1_SETTINGS_READ(CONFIG_1_SENSOR_USE_MAG) ? "enabled" : "disabled");
+				printk("Usage: mag on|off (switch), calibrate_mag (calibration channel)\n");
+			}
+			else
+			{
+				printk("Usage: mag on|off\n");
+			}
+		}
+		else if (strcmp(argv[0], command_calibrate_mag) == 0)
+		{
+			printk("Starting magnetometer calibration...\n");
+			printk("Please rotate the device to cover all 6 sides (-X +X -Y +Y -Z +Z).\n");
 			sensor_calibration_clear_mag(NULL, true);
+			sensor_request_calibration_mag();
+		}
+#endif
+#if CONFIG_USE_IMU_TAP
+		else if (strcmp(argv[0], command_tap) == 0)
+		{
+			if (argc == 2 && strcmp(argv[1], "on") == 0)
+			{
+				config_1_settings_write(CONFIG_1_USE_IMU_TAP, true);
+				printk("Tap interaction enabled\n");
+			}
+			else if (argc == 2 && strcmp(argv[1], "off") == 0)
+			{
+				config_1_settings_write(CONFIG_1_USE_IMU_TAP, false);
+				printk("Tap interaction disabled\n");
+			}
+			else if (argc == 1)
+			{
+				printk("Tap interaction: %s\n", CONFIG_1_SETTINGS_READ(CONFIG_1_USE_IMU_TAP) ? "enabled" : "disabled");
+				printk("Usage: tap on|off\n");
+			}
+			else
+			{
+				printk("Usage: tap on|off\n");
+			}
 		}
 #endif
 		else if (strcmp(argv[0], command_set) == 0)
@@ -681,6 +750,33 @@ static void console_thread(void)
 		{
 			print_meow();
 		}
+		else if (strcmp(argv[0], command_debug_imu) == 0)
+		{
+			float a[3], g[3];
+			if (sensor_debug_read_imu(a, g))
+			{
+				printk("IMU not available\n");
+			}
+			else
+			{
+				printk("Accel: %.5f %.5f %.5f (g)\n", (double)a[0], (double)a[1], (double)a[2]);
+				printk("Gyro:  %.5f %.5f %.5f (deg/s)\n", (double)g[0], (double)g[1], (double)g[2]);
+			}
+		}
+#if SENSOR_MAG_EXISTS
+		else if (strcmp(argv[0], command_debug_mag) == 0)
+		{
+			float m[3];
+			if (sensor_debug_read_mag(m))
+			{
+				printk("Magnetometer not available\n");
+			}
+			else
+			{
+				printk("Mag: %.5f %.5f %.5f\n", (double)m[0], (double)m[1], (double)m[2]);
+			}
+		}
+#endif
 		else if (strcmp(argv[0], command_reset_data) == 0)
 		{
 			if (argc != 2)

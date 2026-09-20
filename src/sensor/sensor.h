@@ -29,6 +29,8 @@ const char *sensor_get_sensor_imu_name(void);
 const char *sensor_get_sensor_mag_name(void);
 const char *sensor_get_sensor_fusion_name(void);
 
+bool sensor_mag_available(void);
+
 int sensor_get_sensor_temperature(float *);
 
 int sensor_request_scan(bool force);
@@ -50,6 +52,9 @@ void main_imu_suspend(void);
 void main_imu_resume(void);
 void main_imu_wakeup(void);
 void main_imu_restart(void);
+
+int sensor_debug_read_imu(float a[3], float g[3]);
+int sensor_debug_read_mag(float m[3]);
 
 typedef struct sensor_fusion {
 	void (*init)(float, float, float); // gyro_time, accel_time, mag_time

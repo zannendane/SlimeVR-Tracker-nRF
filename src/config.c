@@ -33,6 +33,7 @@ const char *config_settings_names[] = {
 	"sensor_use_mag",
 	"use_sensor_clock",
 	"sensor_use_6_side_calibration",
+	"use_imu_tap",
 	"led_default_color_r", // 2
 	"led_default_color_g",
 	"led_default_color_b",
@@ -65,9 +66,10 @@ const bool config_1_settings_defaults[16] = {
 	IS_ENABLED(CONFIG_SENSOR_USE_LOW_POWER_2),
 	IS_ENABLED(CONFIG_USE_IMU_TIMEOUT),
 	IS_ENABLED(CONFIG_USE_ACTIVE_TIMEOUT),
-	IS_ENABLED(CONFIG_SENSOR_USE_MAG),
+	IS_ENABLED(CONFIG_SENSOR_USE_MAG_DEFAULT),
 	IS_ENABLED(CONFIG_USE_SENSOR_CLOCK),
 	IS_ENABLED(CONFIG_SENSOR_USE_6_SIDE_CALIBRATION),
+	IS_ENABLED(CONFIG_USE_IMU_TAP_DEFAULT),
 };
 
 const int16_t config_2_settings_defaults[16] = {

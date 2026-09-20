@@ -294,4 +294,8 @@ static uint8_t get_server_constant_tracker_status(int status)
 
 #define TOSTRING(x) STRINGIFY(x)
 
-#define FW_STRING FW_NAME " " APP_VERSION_EXTENDED_STRING "\n"
+#ifndef SLIMENRF_BASE_COMMIT
+#define SLIMENRF_BASE_COMMIT "unknown"
+#endif
+
+#define FW_STRING FW_NAME " " APP_VERSION_EXTENDED_STRING " (slimenrf:" SLIMENRF_BASE_COMMIT ")\n"

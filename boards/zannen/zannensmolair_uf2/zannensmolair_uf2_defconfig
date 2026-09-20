@@ -1,0 +1,67 @@
+# Copyright (c) 2024 Nordic Semiconductor ASA
+# SPDX-License-Identifier: Apache-2.0
+
+# ZannenSmolAir base config (same as the I2C variant)
+
+CONFIG_ARM_MPU=y
+CONFIG_HW_STACK_PROTECTION=y
+
+CONFIG_USB_DEVICE_STACK=y
+CONFIG_USB_DEVICE_MANUFACTURER="SlimeVR"
+CONFIG_USB_DEVICE_PRODUCT="SlimeVR ZannenSmolAir"
+
+# VDD is 3.0V from an LDO (TPS7A2030) supplied by the BQ25185 power path
+CONFIG_BATTERY_USE_REG_LDO_MAPPING=y
+
+# Battery ADC: 150k/330k divider, internal 0.6V reference, single ended,
+# 1/5 gain (3.0V full scale), 12-bit, 8 samples averaged, 40us acquisition,
+# 100ms settling time after enabling the divider load switch
+CONFIG_BATTERY_ADC_GAIN_DIVISOR=5
+CONFIG_BATTERY_ADC_RESOLUTION=12
+CONFIG_BATTERY_ADC_OVERSAMPLING=3
+CONFIG_BATTERY_ADC_ACQUISITION_US=40
+CONFIG_BATTERY_MEASURE_SETTLE_MS=100
+CONFIG_BATTERY_SAMPLE_INTERVAL_MS=5000
+
+# Enter deep sleep only after 1 week of cumulative awake time without a
+# receiver connection (survives WOM cycles), 7 * 24 * 60 * 60 * 1000 ms
+CONFIG_CONNECTION_TIMEOUT_DELAY=604800000
+# IMU mounting rotation, verified by on-device axis tests
+# (correction is Z -90 degrees)
+CONFIG_SENSOR_ROTATION_270=y
+
+# Wider full scales for motion saturation robustness (noise density is
+# range-independent, so there is no tracking quality penalty)
+CONFIG_SENSOR_ACCEL_FS=8
+CONFIG_SENSOR_GYRO_FS=2000
+
+#generate for adafruit uf2 bootloader flashing
+#bootloader ships SoftDevice S140 v7.3.0 (0x1000-0x27000), app starts after it
+CONFIG_BUILD_OUTPUT_UF2=y
+CONFIG_FLASH_LOAD_OFFSET=0x27000
+#QFN40 (QDAA) defconfig lacks the SoC UF2 family default, set it explicitly
+CONFIG_BUILD_OUTPUT_UF2_FAMILY_ID="0x621e937a"
+
+# No user button on ZannenSmolAir, IMU tap detection acts as a virtual button:
+# 2 taps = calibration, 3 taps = pairing reset, 4 or more taps = DFU
+# (actions go through sys_reset_mode like reset counting, requires USER_EXTRA_ACTIONS)
+CONFIG_USER_EXTRA_ACTIONS=y
+CONFIG_USE_IMU_TAP=y
+# Tap interaction compiled in, but disabled at factory default
+# (persistent runtime setting: toggle with console 'tap on'/'tap off')
+CONFIG_USE_IMU_TAP_DEFAULT=n
+
+# Magnetometer support compiled in, but disabled at factory default
+# (persistent runtime setting: toggle with console 'mag on'/'mag off')
+CONFIG_SENSOR_USE_MAG=y
+CONFIG_SENSOR_USE_MAG_DEFAULT=n
+CONFIG_MAG_AUTO_CALIBRATION=y
+
+# Charge current near the magnetometer disturbs the field, ignore mag while charging
+CONFIG_MAG_IGNORE_WHILE_CHARGING=y
+
+# No external IMU clock on this hardware
+CONFIG_USE_SENSOR_CLOCK=n
+
+# Lower IMU ODR in WOM to save standby power (default is 240Hz)
+CONFIG_WOM_ACCEL_ODR=120
