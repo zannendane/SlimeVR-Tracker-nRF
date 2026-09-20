@@ -179,7 +179,7 @@ jobs:
           rm -rf SlimeVR-Tracker-nRF
 
           git clone --filter=blob:none --no-checkout "${{ steps.generate-vars.outputs.repo-url }}" SlimeVR-Tracker-nRF
-          git -C SlimeVR-Tracker-nRF fetch --depth=1 origin "${{ steps.generate-vars.outputs.repo-hash }}"
+          git -C SlimeVR-Tracker-nRF fetch --tags origin "${{ steps.generate-vars.outputs.repo-hash }}"
           git -C SlimeVR-Tracker-nRF checkout "${{ steps.generate-vars.outputs.repo-hash }}"
           git -C SlimeVR-Tracker-nRF submodule update --init --recursive --depth 1
 
