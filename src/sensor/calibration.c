@@ -233,6 +233,12 @@ void sensor_calibration_clear_mag(float m_inv[][3], bool write)
 	}
 }
 
+bool sensor_calibration_mag_data_empty(void)
+{
+	float zero[3] = {0};
+	return v_diff_mag(magBAinv[0], zero) == 0; // zeroed offset matrix means no calibration data
+}
+
 void sensor_request_calibration(void)
 {
 	if (sensor_calibration_request(1))
@@ -832,7 +838,7 @@ static void calibration_thread(void)
 	// Auto-start magnetometer calibration if data is empty or invalid
 	{
 		float zero[3] = {0};
-		if (v_diff_mag(magBAinv[0], zero) == 0) // mag cal is empty (offset is zero)
+		if (v_diff_mag(magBAinv[0], zero) == 0 && CONFIG_1_SETTINGS_READ(CONFIG_1_SENSOR_USE_MAG)) // mag cal is empty (offset is zero) and magnetometer is enabled
 		{
 			printk("Magnetometer calibration data is empty or invalid.\n");
 			printk("Waiting for sensor to initialize...\n");

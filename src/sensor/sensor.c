@@ -108,6 +108,7 @@ static bool main_suspended;
 
 static bool mag_available;
 static bool mag_enabled; // TODO: toggle from server
+static bool mag_enabled_prev = true; // for mag on edge detection (init true so boot does not count as an edge)
 
 static int fusion_id = 0;
 static const sensor_fusion_t *sensor_fusion = &sensor_fusion_none;
@@ -827,6 +828,17 @@ void sensor_loop(void)
 	while (1)
 	{
 		int64_t time_begin = k_uptime_get();
+		mag_enabled = CONFIG_1_SETTINGS_READ(CONFIG_1_SENSOR_USE_MAG); // refresh so mag on/off takes effect at runtime
+#if CONFIG_MAG_AUTO_CALIBRATION
+		// magnetometer enabled with no calibration data: auto-start calibration
+		if (mag_enabled && !mag_enabled_prev && mag_available && sensor_calibration_mag_data_empty())
+		{
+			printk("Magnetometer enabled with no calibration data, starting automatic magnetometer calibration...\n");
+			printk("Please rotate the device to cover all 6 sides (-X +X -Y +Y -Z +Z).\n");
+			sensor_request_calibration_mag();
+		}
+		mag_enabled_prev = mag_enabled;
+#endif
 		if (main_ok)
 		{
 #if DEBUG
@@ -878,7 +890,7 @@ void sensor_loop(void)
 			// Read magnetometer
 			float raw_m[3];
 			bool mag_read = false;
-			if (mag_available && mag_enabled && !(IS_ENABLED(CONFIG_MAG_IGNORE_WHILE_CHARGING) && chg_read()) && (k_uptime_get() - last_mag_time > mag_interval)) // some magnetometer do not have int pin // TODO: implement for magnetometer that does, or read status byte
+			if (mag_available && mag_enabled && !(IS_ENABLED(CONFIG_MAG_IGNORE_WHILE_CHARGING) && chg_read() && !get_status(SYS_STATUS_CALIBRATION_RUNNING)) && (k_uptime_get() - last_mag_time > mag_interval)) // some magnetometer do not have int pin // TODO: implement for magnetometer that does, or read status byte
 			{
 				mag_read = true;
 				sensor_mag->mag_read(raw_m); // reading mag last, and it will be processed last

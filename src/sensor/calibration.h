@@ -40,6 +40,7 @@ int sensor_calibration_validate_mag(float m_inv[][3], bool write);
 void sensor_calibration_clear(float *a_bias, float *g_bias, bool write);
 void sensor_calibration_clear_6_side(float a_inv[][3], bool write);
 void sensor_calibration_clear_mag(float m_inv[][3], bool write); // "request" mag cal
+bool sensor_calibration_mag_data_empty(void); // true if no magnetometer calibration data
 
 void sensor_request_calibration(void);
 void sensor_request_calibration_6_side(void);

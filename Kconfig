@@ -194,7 +194,8 @@ config MAG_IGNORE_WHILE_CHARGING
         charging. Charge current flowing near the magnetometer disturbs the
         magnetic field, ignoring it avoids polluting the fusion's local
         field reference. Heading is tracked by the gyroscope alone while
-        charging and resumes seamlessly afterwards.
+        charging and resumes seamlessly afterwards. Reads are not suspended
+        while a calibration is running.
 
 config IGNORE_RESET
     bool "Ignore reset"
@@ -414,6 +415,16 @@ config SENSOR_USE_MAG
     default y
     help
         Use magnetometer if it is present.
+
+config SENSOR_USE_MAG_DEFAULT
+    bool "Magnetometer enabled by default"
+    default y
+    depends on SENSOR_USE_MAG
+    help
+        Default state of the magnetometer enable setting on factory firmware.
+        The state is a persistent runtime setting (stored in NVS) and can be
+        toggled later with the console 'mag on'/'mag off' commands or
+        'write_config sensor_use_mag', e.g. from the server.
 
 config USE_SENSOR_CLOCK
     bool "Use external IMU clock"

@@ -48,8 +48,10 @@ CONFIG_BUILD_OUTPUT_UF2_FAMILY_ID="0x621e937a"
 CONFIG_USER_EXTRA_ACTIONS=y
 CONFIG_USE_IMU_TAP=y
 
-# Enable magnetometer by default and auto-calibration
+# Magnetometer support compiled in, but disabled at factory default
+# (persistent runtime setting: toggle with console 'mag on'/'mag off')
 CONFIG_SENSOR_USE_MAG=y
+CONFIG_SENSOR_USE_MAG_DEFAULT=n
 CONFIG_MAG_AUTO_CALIBRATION=y
 
 # Charge current near the magnetometer disturbs the field, ignore mag while charging

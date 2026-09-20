@@ -498,8 +498,9 @@ static void print_help(void)
 	printk("calibrate                    Calibrate sensor ZRO (gyro/accel bias)\n");
 	printk("6-side                       Calibrate 6-side accelerometer\n");
 #if SENSOR_MAG_EXISTS
-	printk("mag                          Clear magnetometer calibration data\n");
-	printk("calibrate_mag                Start magnetometer calibration (clears existing data first)\n");
+	printk("mag on|off                   Enable or disable the magnetometer (persistent)\n");
+	printk("mag                          Show magnetometer state\n");
+	printk("calibrate_mag                Magnetometer calibration channel (clears existing data first)\n");
 #endif
 	printk("\ndebug_imu                    Print real-time IMU data (accel in g, gyro in deg/s)\n");
 #if SENSOR_MAG_EXISTS
@@ -651,7 +652,25 @@ static void console_thread(void)
 #if SENSOR_MAG_EXISTS
 		else if (strcmp(argv[0], command_mag) == 0)
 		{
-			sensor_calibration_clear_mag(NULL, true);
+			if (argc == 2 && strcmp(argv[1], "on") == 0)
+			{
+				config_1_settings_write(CONFIG_1_SENSOR_USE_MAG, true);
+				printk("Magnetometer enabled\n");
+			}
+			else if (argc == 2 && strcmp(argv[1], "off") == 0)
+			{
+				config_1_settings_write(CONFIG_1_SENSOR_USE_MAG, false);
+				printk("Magnetometer disabled\n");
+			}
+			else if (argc == 1)
+			{
+				printk("Magnetometer: %s\n", CONFIG_1_SETTINGS_READ(CONFIG_1_SENSOR_USE_MAG) ? "enabled" : "disabled");
+				printk("Usage: mag on|off (switch), calibrate_mag (calibration channel)\n");
+			}
+			else
+			{
+				printk("Usage: mag on|off\n");
+			}
 		}
 		else if (strcmp(argv[0], command_calibrate_mag) == 0)
 		{
