@@ -33,6 +33,7 @@ jobs:
           path: zephyr-workspace/SlimeNRF-CI
           submodules: recursive
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
 
       - name: 📟 Generate CI Variables
         id: generate-vars
@@ -222,6 +223,7 @@ jobs:
           path: zephyr-workspace/SlimeNRF-CI
           submodules: recursive
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
 
       - name: 🧰 Cache + Install Apt Dependencies
         id: restore-apt
