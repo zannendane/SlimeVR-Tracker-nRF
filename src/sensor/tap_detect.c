@@ -25,6 +25,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 
+#include "config.h"
 #include "system/status.h"
 #include "system/tap.h"
 
